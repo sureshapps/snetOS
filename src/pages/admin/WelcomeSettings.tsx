@@ -55,6 +55,8 @@ interface WelcomeConfig {
   textShadowBlur: number;
   backgroundImage: string;
   useBackgroundImage: boolean;
+  showWeather: boolean;
+  showQuickActions: boolean;
 }
 
 interface NotificationConfig {
@@ -89,6 +91,8 @@ const WelcomeSettings = () => {
     textShadowBlur: 10,
     backgroundImage: "",
     useBackgroundImage: false,
+    showWeather: true,
+    showQuickActions: true,
   });
   
   const [notificationConfig, setNotificationConfig] = useState<NotificationConfig>({
@@ -485,6 +489,41 @@ const WelcomeSettings = () => {
                       )}
                     </div>
                   )}
+                </CardContent>
+              </Card>
+
+              {/* Lock Screen Elements */}
+              <Card className="bg-white/5 border-white/10">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-white text-sm flex items-center gap-2">
+                    <Palette className="w-4 h-4" />
+                    Lock Screen Elements
+                  </CardTitle>
+                  <CardDescription className="text-white/60 text-xs">
+                    Shown on the lock screen face, after the intro text finishes
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label className="text-white/80 text-sm">Show Weather</Label>
+                      <p className="text-white/40 text-xs">Live temperature and conditions below the clock</p>
+                    </div>
+                    <Switch
+                      checked={config.showWeather}
+                      onCheckedChange={(checked) => setConfig({ ...config, showWeather: checked })}
+                    />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label className="text-white/80 text-sm">Show Flashlight &amp; Camera</Label>
+                      <p className="text-white/40 text-xs">Quick action buttons at the bottom of the lock screen</p>
+                    </div>
+                    <Switch
+                      checked={config.showQuickActions}
+                      onCheckedChange={(checked) => setConfig({ ...config, showQuickActions: checked })}
+                    />
+                  </div>
                 </CardContent>
               </Card>
 
