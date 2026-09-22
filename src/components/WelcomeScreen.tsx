@@ -1,9 +1,8 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { useEffect, useState, useRef } from "react";
-import { Cloud, Sun, CloudRain, CloudSnow, CloudLightning, Wind, Flashlight, Camera } from "lucide-react";
+import { Fingerprint, Flashlight, Camera } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import startupSound from "@/assets/startup-sound.wav";
-import SlideToUnlock from "./SlideToUnlock";
 
 interface WelcomeScreenProps {
   onComplete: () => void;
@@ -28,8 +27,24 @@ interface WelcomeConfig {
   textShadowBlur: number;
   backgroundImage?: string;
   useBackgroundImage?: boolean;
-  showWeather?: boolean;
   showQuickActions?: boolean;
+  // Lock screen fonts
+  dateFont?: string;
+  timeFont?: string;
+  quoteFont?: string;
+  // Liquid glass clock colors
+  timeGradientFrom?: string;
+  timeGradientMid?: string;
+  timeGradientTo?: string;
+  timeGlowColor?: string;
+  // Fingerprint unlock colors
+  fingerprintIdleColor?: string;
+  fingerprintScanColorFrom?: string;
+  fingerprintScanColorMid?: string;
+  fingerprintScanColorTo?: string;
+  // Daily quote
+  showQuote?: boolean;
+  quoteApiUrl?: string;
 }
 
 const FONT_MAP: Record<string, string> = {
@@ -55,60 +70,85 @@ const FONT_MAP: Record<string, string> = {
   orbitron: "'Orbitron', sans-serif",
   cinzel: "'Cinzel', serif",
   cormorant: "'Cormorant Garamond', serif",
+  fredoka: "'Fredoka', sans-serif",
+  baloo2: "'Baloo 2', sans-serif",
+  quicksand: "'Quicksand', sans-serif",
+  nunito: "'Nunito', sans-serif",
 };
 
-// Reused from WeatherWidget so the lock screen shows the same live conditions
-const OPENWEATHER_API_KEY = "4d8fb5b93d4af21d66a2948710284366";
-
-interface LockWeather {
-  temp: number;
-  tempMin: number;
-  tempMax: number;
-  condition: string;
+interface DailyQuote {
+  text: string;
+  author: string;
 }
 
-const mapIconToCondition = (iconCode: string): string => {
-  const code = iconCode.substring(0, 2);
-  switch (code) {
-    case "01": return "sunny";
-    case "02": case "03": case "04": return "cloudy";
-    case "09": case "10": return "rainy";
-    case "11": return "storm";
-    case "13": return "snow";
-    case "50": return "windy";
-    default: return "sunny";
-  }
+// Used when no Quote API is configured, or the configured one fails —
+// cycles by day-of-year so it still "changes daily automatically".
+const FALLBACK_QUOTES: DailyQuote[] = [
+  { text: "The happiness of your life depends on the quality of your thoughts.", author: "Marcus Aurelius" },
+  { text: "The only way to do great work is to love what you do.", author: "Steve Jobs" },
+  { text: "Simplicity is the ultimate sophistication.", author: "Leonardo da Vinci" },
+  { text: "What we think, we become.", author: "Buddha" },
+  { text: "The unexamined life is not worth living.", author: "Socrates" },
+  { text: "It always seems impossible until it's done.", author: "Nelson Mandela" },
+  { text: "Well done is better than well said.", author: "Benjamin Franklin" },
+  { text: "Do the best you can until you know better. Then do better.", author: "Maya Angelou" },
+];
+
+const QUOTE_CACHE_KEY = "lockscreen_daily_quote";
+
+const getDayOfYear = (date: Date) => {
+  const start = new Date(date.getFullYear(), 0, 0);
+  const diff = date.getTime() - start.getTime();
+  return Math.floor(diff / (1000 * 60 * 60 * 24));
 };
 
-const getWeatherIcon = (condition: string, size = 16) => {
-  switch (condition) {
-    case "sunny":
-      return <Sun size={size} className="text-yellow-300 drop-shadow" />;
-    case "cloudy":
-      return <Cloud size={size} className="text-white/90 drop-shadow" />;
-    case "rainy":
-      return <CloudRain size={size} className="text-blue-200 drop-shadow" />;
-    case "snow":
-      return <CloudSnow size={size} className="text-white drop-shadow" />;
-    case "storm":
-      return <CloudLightning size={size} className="text-yellow-200 drop-shadow" />;
-    case "windy":
-      return <Wind size={size} className="text-gray-200 drop-shadow" />;
-    default:
-      return <Cloud size={size} className="text-white/90 drop-shadow" />;
-  }
-};
+const fetchDailyQuote = async (apiUrl?: string): Promise<DailyQuote> => {
+  const todayKey = new Date().toDateString();
 
-const conditionLabel = (condition: string) => {
-  switch (condition) {
-    case "sunny": return "Sunny";
-    case "cloudy": return "Partly Cloudy";
-    case "rainy": return "Rainy";
-    case "snow": return "Snow";
-    case "storm": return "Thunderstorm";
-    case "windy": return "Windy";
-    default: return "Partly Cloudy";
+  // Return the cached quote for today if we already picked one
+  try {
+    const cachedRaw = localStorage.getItem(QUOTE_CACHE_KEY);
+    if (cachedRaw) {
+      const cached = JSON.parse(cachedRaw);
+      if (cached.date === todayKey && cached.quote?.text) {
+        return cached.quote as DailyQuote;
+      }
+    }
+  } catch {
+    // ignore malformed cache
   }
+
+  let quote: DailyQuote | null = null;
+
+  if (apiUrl) {
+    try {
+      const res = await fetch(apiUrl);
+      if (res.ok) {
+        const data = await res.json();
+        const item = Array.isArray(data) ? data[0] : data;
+        const text = item?.content || item?.quote || item?.text || item?.q || "";
+        const author = item?.author || item?.a || item?.by || "Unknown";
+        if (text) {
+          quote = { text, author };
+        }
+      }
+    } catch (err) {
+      console.error("Quote API fetch failed, falling back to built-in quotes:", err);
+    }
+  }
+
+  if (!quote) {
+    const index = getDayOfYear(new Date()) % FALLBACK_QUOTES.length;
+    quote = FALLBACK_QUOTES[index];
+  }
+
+  try {
+    localStorage.setItem(QUOTE_CACHE_KEY, JSON.stringify({ date: todayKey, quote }));
+  } catch {
+    // storage full / unavailable — not critical
+  }
+
+  return quote;
 };
 
 const WelcomeScreen = ({ onComplete }: WelcomeScreenProps) => {
@@ -119,8 +159,12 @@ const WelcomeScreen = ({ onComplete }: WelcomeScreenProps) => {
   const [currentTime, setCurrentTime] = useState(new Date());
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  // Live weather for the lock screen
-  const [weather, setWeather] = useState<LockWeather | null>(null);
+  // Daily quote
+  const [quote, setQuote] = useState<DailyQuote | null>(null);
+
+  // Fingerprint scan-to-unlock
+  const [isScanning, setIsScanning] = useState(false);
+  const scanTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Flashlight (torch) state
   const [torchOn, setTorchOn] = useState(false);
@@ -183,44 +227,21 @@ const WelcomeScreen = ({ onComplete }: WelcomeScreenProps) => {
     return () => clearTimeout(timer);
   }, [config, isLoading]);
 
-  // Fetch live weather once the lock screen face is about to show
+  // Load (and daily-cache) the quote once the lock face is about to show
   useEffect(() => {
-    if (!showSlider || config?.showWeather === false || weather) return;
+    if (!showSlider || config?.showQuote === false || quote) return;
+    fetchDailyQuote(config?.quoteApiUrl).then(setQuote);
+  }, [showSlider, config?.showQuote, config?.quoteApiUrl, quote]);
 
-    if (!("geolocation" in navigator)) return;
-
-    navigator.geolocation.getCurrentPosition(
-      async (position) => {
-        try {
-          const { latitude, longitude } = position.coords;
-          const res = await fetch(
-            `https://api.openweathermap.org/data/2.5/weather?lat=${latitude}&lon=${longitude}&units=metric&appid=${OPENWEATHER_API_KEY}`
-          );
-          if (!res.ok) return;
-          const data = await res.json();
-          setWeather({
-            temp: Math.round(data.main.temp),
-            tempMin: Math.round(data.main.temp_min),
-            tempMax: Math.round(data.main.temp_max),
-            condition: mapIconToCondition(data.weather[0].icon),
-          });
-        } catch (err) {
-          console.error("Lock screen weather fetch failed:", err);
-        }
-      },
-      () => {
-        // Location denied/unavailable — silently skip, weather section just won't render
-      },
-      { timeout: 10000 }
-    );
-  }, [showSlider, config?.showWeather, weather]);
-
-  // Cleanup the torch track if the component unmounts while the flashlight is on
+  // Cleanup the torch track and any pending scan timeout on unmount
   useEffect(() => {
     return () => {
       if (torchTrackRef.current) {
         torchTrackRef.current.stop();
         torchTrackRef.current = null;
+      }
+      if (scanTimeoutRef.current) {
+        clearTimeout(scanTimeoutRef.current);
       }
     };
   }, []);
@@ -230,6 +251,21 @@ const WelcomeScreen = ({ onComplete }: WelcomeScreenProps) => {
     setTimeout(() => {
       onComplete();
     }, 500);
+  };
+
+  const startScan = () => {
+    setIsScanning(true);
+    scanTimeoutRef.current = setTimeout(() => {
+      handleUnlock();
+    }, 900);
+  };
+
+  const cancelScan = () => {
+    if (scanTimeoutRef.current) {
+      clearTimeout(scanTimeoutRef.current);
+      scanTimeoutRef.current = null;
+    }
+    setIsScanning(false);
   };
 
   const toggleFlashlight = async (e: React.MouseEvent) => {
@@ -282,17 +318,34 @@ const WelcomeScreen = ({ onComplete }: WelcomeScreenProps) => {
     return `0 4px ${config.textShadowBlur}px ${config.textShadowColor}`;
   };
 
-  const weekday = currentTime.toLocaleDateString("en-US", { weekday: "short" });
-  const month = currentTime.toLocaleDateString("en-US", { month: "short" });
-  const dateLabel = `${weekday} ${currentTime.getDate()} ${month}`;
+  const dateLabel = currentTime.toLocaleDateString("en-US", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
   const timeLabel = currentTime.toLocaleTimeString("en-US", {
     hour: "numeric",
     minute: "2-digit",
     hour12: false,
   });
 
-  const showWeather = config.showWeather !== false;
   const showQuickActions = config.showQuickActions !== false;
+  const showQuote = config.showQuote !== false;
+
+  const dateFontFamily = FONT_MAP[config.dateFont || "quicksand"] || "'Quicksand', sans-serif";
+  const timeFontFamily = FONT_MAP[config.timeFont || "fredoka"] || "'Fredoka', sans-serif";
+  const quoteFontFamily = FONT_MAP[config.quoteFont || "comfortaa"] || "'Comfortaa', cursive";
+
+  const timeGradientFrom = config.timeGradientFrom || "#eaf3ff";
+  const timeGradientMid = config.timeGradientMid || "#a9cdf7";
+  const timeGradientTo = config.timeGradientTo || "#ffffff";
+  const timeGlowColor = config.timeGlowColor || "#6fa8ff";
+
+  const fingerprintIdleColor = config.fingerprintIdleColor || "#ffffff99";
+  const fingerprintScanFrom = config.fingerprintScanColorFrom || "#b455f0";
+  const fingerprintScanMid = config.fingerprintScanColorMid || "#ff2fb0";
+  const fingerprintScanTo = config.fingerprintScanColorTo || "#ff3b3b";
 
   return (
     <motion.div
@@ -321,31 +374,6 @@ const WelcomeScreen = ({ onComplete }: WelcomeScreenProps) => {
           }}
         />
       )}
-
-      {/* Liquid Glass: drifting colour blobs that the glass panels refract/blur */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div
-          className="liquid-blob w-[60vw] h-[60vw] -top-[15vw] -left-[10vw]"
-          style={{ background: config.gradientFrom, animationDelay: "0s" }}
-        />
-        <div
-          className="liquid-blob w-[55vw] h-[55vw] top-1/3 -right-[15vw]"
-          style={{ background: config.gradientVia, animationDelay: "4s" }}
-        />
-        <div
-          className="liquid-blob w-[50vw] h-[50vw] -bottom-[15vw] left-1/4"
-          style={{ background: config.gradientTo, animationDelay: "8s" }}
-        />
-        {/* Thin frosted tint over everything so the whole screen reads as one glass surface */}
-        <div
-          className="absolute inset-0"
-          style={{
-            backdropFilter: "blur(2px) saturate(115%)",
-            WebkitBackdropFilter: "blur(2px) saturate(115%)",
-            background: "rgba(255,255,255,0.02)",
-          }}
-        />
-      </div>
 
       {/* Animated Welcome Text (only before the lock face appears) */}
       {!showSlider && (
@@ -403,11 +431,11 @@ const WelcomeScreen = ({ onComplete }: WelcomeScreenProps) => {
         </motion.div>
       )}
 
-      {/* iOS-style Lock Screen face: date, time, weather */}
+      {/* iOS-style Lock Screen face: date, liquid glass time, daily quote */}
       <AnimatePresence>
         {showSlider && (
           <motion.div
-            className="absolute top-16 z-20 flex flex-col items-center"
+            className="absolute top-16 z-20 flex flex-col items-center px-8"
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
@@ -415,34 +443,34 @@ const WelcomeScreen = ({ onComplete }: WelcomeScreenProps) => {
           >
             {/* Date */}
             <div 
-              className="text-lg sm:text-xl font-semibold text-white mb-1"
+              className="text-lg sm:text-xl text-white mb-1 text-center"
               style={{
-                fontFamily: "'iPhone', sans-serif",
+                fontFamily: dateFontFamily,
                 textShadow: "0 1px 10px rgba(0,0,0,0.3)"
               }}
             >
               {dateLabel}
             </div>
 
-            {/* Time — iOS 27-style liquid glass numerals */}
+            {/* Time — liquid glass numerals */}
             <div className="relative">
               <div
                 className="
                   text-[100px]
                   sm:text-[120px]
                   md:text-[140px]
-                  font-light
+                  font-semibold
                   leading-[0.9]
                 "
                 style={{
-                  fontFamily: "'iPhone Lite', sans-serif",
+                  fontFamily: timeFontFamily,
                   letterSpacing: '1px',
-                  background: "linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(255,255,255,0.72) 45%, rgba(255,255,255,0.95) 100%)",
+                  background: `linear-gradient(180deg, ${timeGradientFrom} 0%, ${timeGradientMid} 45%, ${timeGradientTo} 100%)`,
                   WebkitBackgroundClip: "text",
                   backgroundClip: "text",
                   color: "transparent",
-                  textShadow: "0 8px 40px rgba(0,0,0,0.4)",
-                  filter: "drop-shadow(0 1px 0 rgba(255,255,255,0.3))",
+                  textShadow: `0 8px 40px rgba(0,0,0,0.4)`,
+                  filter: `drop-shadow(0 0 24px ${timeGlowColor}77) drop-shadow(0 1px 0 rgba(255,255,255,0.4))`,
                 }}
               >  
                 {timeLabel}
@@ -451,7 +479,7 @@ const WelcomeScreen = ({ onComplete }: WelcomeScreenProps) => {
               <motion.div
                 className="absolute inset-0 pointer-events-none"
                 style={{
-                  background: "linear-gradient(100deg, transparent 35%, rgba(255,255,255,0.6) 50%, transparent 65%)",
+                  background: "linear-gradient(100deg, transparent 35%, rgba(255,255,255,0.65) 50%, transparent 65%)",
                   mixBlendMode: "overlay",
                 }}
                 animate={{ x: ["-70%", "70%"] }}
@@ -459,27 +487,74 @@ const WelcomeScreen = ({ onComplete }: WelcomeScreenProps) => {
               />
             </div>
 
-            {/* Weather */}
-            {showWeather && weather && (
+            {/* Daily Quote */}
+            {showQuote && quote && (
               <motion.div
-                className="liquid-glass flex flex-col items-center mt-4 text-white rounded-[24px] px-6 py-3"
-                initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
+                className="text-center max-w-xs sm:max-w-sm mt-3 text-white/90 text-sm sm:text-base leading-snug"
+                style={{ fontFamily: quoteFontFamily, textShadow: "0 1px 8px rgba(0,0,0,0.35)" }}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, delay: 0.3 }}
               >
-                <div className="liquid-glass-sheen" />
-                <div className="flex items-center gap-2 text-lg font-medium" style={{ textShadow: "0 1px 8px rgba(0,0,0,0.3)" }}>
-                  {getWeatherIcon(weather.condition, 18)}
-                  <span>{weather.temp}°</span>
-                </div>
-                <div className="text-sm text-white/90" style={{ textShadow: "0 1px 6px rgba(0,0,0,0.3)" }}>
-                  {conditionLabel(weather.condition)}
-                </div>
-                <div className="text-xs text-white/70" style={{ textShadow: "0 1px 6px rgba(0,0,0,0.3)" }}>
-                  H:{weather.tempMax}° L:{weather.tempMin}°
-                </div>
+                "{quote.text}" — {quote.author}
               </motion.div>
             )}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Fingerprint scan-to-unlock */}
+      <AnimatePresence>
+        {showSlider && (
+          <motion.div
+            className="absolute bottom-28 z-20 flex flex-col items-center select-none"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 20 }}
+            transition={{ duration: 0.5, delay: 0.2 }}
+          >
+            {/* Gradient definition for the scanning state, reused via stroke="url(#...)" */}
+            <svg width="0" height="0" style={{ position: "absolute" }}>
+              <defs>
+                <linearGradient id="fingerprint-scan-gradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                  <stop offset="0%" stopColor={fingerprintScanFrom} />
+                  <stop offset="50%" stopColor={fingerprintScanMid} />
+                  <stop offset="100%" stopColor={fingerprintScanTo} />
+                </linearGradient>
+              </defs>
+            </svg>
+
+            <button
+              type="button"
+              className="cursor-pointer touch-none p-2"
+              onMouseDown={startScan}
+              onMouseUp={cancelScan}
+              onMouseLeave={cancelScan}
+              onTouchStart={startScan}
+              onTouchEnd={cancelScan}
+              aria-label="Scan fingerprint to unlock"
+            >
+              <motion.div
+                animate={{ scale: isScanning ? [1, 1.06, 1] : 1 }}
+                transition={{ duration: 0.8, repeat: isScanning ? Infinity : 0, ease: "easeInOut" }}
+              >
+                <Fingerprint
+                  className="w-16 h-16 sm:w-20 sm:h-20 transition-colors duration-300"
+                  strokeWidth={1.5}
+                  stroke={isScanning ? "url(#fingerprint-scan-gradient)" : fingerprintIdleColor}
+                />
+              </motion.div>
+            </button>
+
+            <p
+              className="text-sm mt-1 transition-colors duration-300"
+              style={{
+                color: isScanning ? fingerprintScanMid : "rgba(255,255,255,0.85)",
+                textShadow: "0 1px 6px rgba(0,0,0,0.3)",
+              }}
+            >
+              {isScanning ? "Unlocked..." : "scan to unlock"}
+            </p>
           </motion.div>
         )}
       </AnimatePresence>
@@ -491,28 +566,26 @@ const WelcomeScreen = ({ onComplete }: WelcomeScreenProps) => {
             <motion.button
               type="button"
               onClick={toggleFlashlight}
-              className="liquid-glass absolute bottom-24 left-8 z-20 w-14 h-14 rounded-full flex items-center justify-center"
+              className="absolute bottom-10 left-8 z-20 w-14 h-14 rounded-full flex items-center justify-center bg-black/70 border border-white/10"
               whileTap={{ scale: 0.9 }}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 20 }}
               transition={{ duration: 0.5, delay: 0.2 }}
             >
-              <div className="liquid-glass-sheen" />
               <Flashlight className={`w-6 h-6 ${torchOn ? "text-yellow-300" : "text-white"}`} />
             </motion.button>
 
             <motion.button
               type="button"
               onClick={openCamera}
-              className="liquid-glass absolute bottom-24 right-8 z-20 w-14 h-14 rounded-full flex items-center justify-center"
+              className="absolute bottom-10 right-8 z-20 w-14 h-14 rounded-full flex items-center justify-center bg-black/70 border border-white/10"
               whileTap={{ scale: 0.9 }}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 20 }}
               transition={{ duration: 0.5, delay: 0.2 }}
             >
-              <div className="liquid-glass-sheen" />
               <Camera className="w-6 h-6 text-white" />
             </motion.button>
 
@@ -528,21 +601,6 @@ const WelcomeScreen = ({ onComplete }: WelcomeScreenProps) => {
               }}
             />
           </>
-        )}
-      </AnimatePresence>
-
-      {/* Home indicator / swipe-up to unlock */}
-      <AnimatePresence>
-        {showSlider && (
-          <motion.div
-            className="liquid-glass absolute bottom-2 z-20 rounded-full"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 20 }}
-            transition={{ duration: 0.5 }}
-          >
-            <SlideToUnlock onUnlock={handleUnlock} />
-          </motion.div>
         )}
       </AnimatePresence>
     </motion.div>
