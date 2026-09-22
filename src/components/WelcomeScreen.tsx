@@ -29,15 +29,14 @@ interface WelcomeConfig {
   useBackgroundImage?: boolean;
   showQuickActions?: boolean;
   // Lock screen fonts
-  dateFont?: string;
-  timeFont?: string;
   quoteFont?: string;
-  // Liquid glass clock colors
-  timeGradientFrom?: string;
-  timeGradientMid?: string;
-  timeGradientTo?: string;
-  timeGlowColor?: string;
-  timeStretch?: number;
+  // Simple clock: one font, plain colors, no glow
+  clockFont?: string;
+  clockTimeColor?: string;
+  clockSecondsColor?: string;
+  clockAmPmColor?: string;
+  clockDateColor?: string;
+  clockDateAccentColor?: string;
   // Fingerprint unlock colors
   fingerprintIdleColor?: string;
   fingerprintScanColorFrom?: string;
@@ -319,30 +318,30 @@ const WelcomeScreen = ({ onComplete }: WelcomeScreenProps) => {
     return `0 4px ${config.textShadowBlur}px ${config.textShadowColor}`;
   };
 
-  const dateLabel = currentTime.toLocaleDateString("en-US", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
-  const timeLabel = currentTime.toLocaleTimeString("en-US", {
-    hour: "numeric",
-    minute: "2-digit",
-    hour12: false,
-  });
+  const toTwoDigit = (num: number) => (num < 10 ? "0" : "") + num;
+
+  const hours24 = currentTime.getHours();
+  const hours12 = hours24 % 12 === 0 ? 12 : hours24 % 12;
+  const hrMin = `${toTwoDigit(hours12)}:${toTwoDigit(currentTime.getMinutes())}`;
+  const secondsStr = toTwoDigit(currentTime.getSeconds());
+  const ampm = hours24 >= 12 ? "PM" : "AM";
+
+  const weekdayAbbr = currentTime.toLocaleDateString("en-US", { weekday: "short" });
+  const monthAbbr = currentTime.toLocaleDateString("en-US", { month: "short" });
+  const dayNum = currentTime.getDate();
+  const year = currentTime.getFullYear();
 
   const showQuickActions = config.showQuickActions !== false;
   const showQuote = config.showQuote !== false;
 
-  const dateFontFamily = FONT_MAP[config.dateFont || "quicksand"] || "'Quicksand', sans-serif";
-  const timeFontFamily = FONT_MAP[config.timeFont || "fredoka"] || "'Fredoka', sans-serif";
+  const clockFontFamily = FONT_MAP[config.clockFont || "roboto"] || "'Roboto', sans-serif";
   const quoteFontFamily = FONT_MAP[config.quoteFont || "comfortaa"] || "'Comfortaa', cursive";
 
-  const timeGradientFrom = config.timeGradientFrom || "#eaf3ff";
-  const timeGradientMid = config.timeGradientMid || "#a9cdf7";
-  const timeGradientTo = config.timeGradientTo || "#ffffff";
-  const timeGlowColor = config.timeGlowColor || "#6fa8ff";
-  const timeStretch = config.timeStretch || 1.3;
+  const clockTimeColor = config.clockTimeColor || "#ffffff";
+  const clockSecondsColor = config.clockSecondsColor || "#4a4848";
+  const clockAmPmColor = config.clockAmPmColor || "#F44336";
+  const clockDateColor = config.clockDateColor || "#5a5a5a";
+  const clockDateAccentColor = config.clockDateAccentColor || "#ffffff";
 
   const fingerprintIdleColor = config.fingerprintIdleColor || "#ffffff99";
   const fingerprintScanFrom = config.fingerprintScanColorFrom || "#b455f0";
@@ -433,53 +432,63 @@ const WelcomeScreen = ({ onComplete }: WelcomeScreenProps) => {
         </motion.div>
       )}
 
-      {/* iOS-style Lock Screen face: date, liquid glass time, daily quote */}
+      {/* Simple Clock: hour:min, seconds + AM/PM, two-tone date */}
       <AnimatePresence>
         {showSlider && (
           <motion.div
-            className="absolute top-16 z-20 flex flex-col items-center px-8"
+            className="absolute top-16 z-20 flex flex-col items-center px-8 text-center"
+            style={{ fontFamily: clockFontFamily }}
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
             transition={{ duration: 0.6, ease: "easeOut" }}
           >
-            {/* Date */}
-            <div 
-              className="text-lg sm:text-xl text-white mb-1 text-center"
+            {/* Hour : Minute */}
+            <div
               style={{
-                fontFamily: dateFontFamily,
-                textShadow: "0 1px 10px rgba(0,0,0,0.3)"
+                fontSize: "clamp(64px, 22vw, 100px)",
+                lineHeight: 1,
+                color: clockTimeColor,
               }}
             >
-              {dateLabel}
+              {hrMin}
             </div>
 
-            {/* Time — liquid glass numerals, stretched taller */}
-            <div className="relative">
-              <div
-                className="
-                  text-[100px]
-                  sm:text-[120px]
-                  md:text-[140px]
-                  font-semibold
-                  leading-[0.9]
-                "
+            {/* Seconds + AM/PM */}
+            <div
+              style={{
+                fontSize: "clamp(36px, 13vw, 60px)",
+                marginTop: "clamp(-20px, -6vw, -12px)",
+                fontWeight: "bold",
+                color: clockAmPmColor,
+              }}
+            >
+              <span
                 style={{
-                  fontFamily: timeFontFamily,
-                  letterSpacing: '1px',
-                  background: `linear-gradient(180deg, ${timeGradientFrom} 0%, ${timeGradientMid} 45%, ${timeGradientTo} 100%)`,
-                  WebkitBackgroundClip: "text",
-                  backgroundClip: "text",
-                  color: "transparent",
-                  textShadow: `0 8px 40px rgba(0,0,0,0.4)`,
-                  filter: `drop-shadow(0 0 24px ${timeGlowColor}77) drop-shadow(0 1px 0 rgba(255,255,255,0.4))`,
-                  transform: `scaleY(${timeStretch})`,
-                  transformOrigin: "center",
-                  display: "inline-block",
+                  fontSize: "clamp(78px, 28vw, 130px)",
+                  fontWeight: "bold",
+                  color: clockSecondsColor,
                 }}
-              >  
-                {timeLabel}
-              </div>
+              >
+                {secondsStr}
+              </span>{" "}
+              {ampm}
+            </div>
+
+            {/* Date */}
+            <div
+              style={{
+                fontSize: "clamp(16px, 6vw, 29px)",
+                textTransform: "uppercase",
+                marginTop: "clamp(-10px, -3vw, -6px)",
+                color: clockDateColor,
+              }}
+            >
+              {weekdayAbbr}{" "}
+              <span style={{ fontWeight: 800, color: clockDateAccentColor }}>
+                {monthAbbr} {dayNum}
+              </span>{" "}
+              {year}
             </div>
 
             {/* Daily Quote */}
