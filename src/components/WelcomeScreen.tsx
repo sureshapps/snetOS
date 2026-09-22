@@ -322,14 +322,40 @@ const WelcomeScreen = ({ onComplete }: WelcomeScreenProps) => {
         />
       )}
 
+      {/* Liquid Glass: drifting colour blobs that the glass panels refract/blur */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div
+          className="liquid-blob w-[60vw] h-[60vw] -top-[15vw] -left-[10vw]"
+          style={{ background: config.gradientFrom, animationDelay: "0s" }}
+        />
+        <div
+          className="liquid-blob w-[55vw] h-[55vw] top-1/3 -right-[15vw]"
+          style={{ background: config.gradientVia, animationDelay: "4s" }}
+        />
+        <div
+          className="liquid-blob w-[50vw] h-[50vw] -bottom-[15vw] left-1/4"
+          style={{ background: config.gradientTo, animationDelay: "8s" }}
+        />
+        {/* Thin frosted tint over everything so the whole screen reads as one glass surface */}
+        <div
+          className="absolute inset-0"
+          style={{
+            backdropFilter: "blur(2px) saturate(115%)",
+            WebkitBackdropFilter: "blur(2px) saturate(115%)",
+            background: "rgba(255,255,255,0.02)",
+          }}
+        />
+      </div>
+
       {/* Animated Welcome Text (only before the lock face appears) */}
       {!showSlider && (
         <motion.div
-          className="relative z-10 flex flex-col items-center gap-2"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.5 }}
+          className="liquid-glass relative z-10 flex flex-col items-center gap-2 rounded-[36px] px-10 py-8"
+          initial={{ opacity: 0, scale: 0.94 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.6, ease: "easeOut" }}
         >
+          <div className="liquid-glass-sheen" />
           <div 
             className="tracking-wide"
             style={{ 
@@ -398,33 +424,50 @@ const WelcomeScreen = ({ onComplete }: WelcomeScreenProps) => {
               {dateLabel}
             </div>
 
-            {/* Time */}
-            <div
-              className="
-                text-[100px]
-                sm:text-[120px]
-                md:text-[140px]
-                font-light
-                leading-[0.9]
-                text-white
-              "
-              style={{
-                fontFamily: "'iPhone Lite', sans-serif",
-                letterSpacing: '1px',
-                textShadow: "0 8px 40px rgba(0,0,0,0.4)"
-              }}
-            >  
-              {timeLabel}
+            {/* Time — iOS 27-style liquid glass numerals */}
+            <div className="relative">
+              <div
+                className="
+                  text-[100px]
+                  sm:text-[120px]
+                  md:text-[140px]
+                  font-light
+                  leading-[0.9]
+                "
+                style={{
+                  fontFamily: "'iPhone Lite', sans-serif",
+                  letterSpacing: '1px',
+                  background: "linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(255,255,255,0.72) 45%, rgba(255,255,255,0.95) 100%)",
+                  WebkitBackgroundClip: "text",
+                  backgroundClip: "text",
+                  color: "transparent",
+                  textShadow: "0 8px 40px rgba(0,0,0,0.4)",
+                  filter: "drop-shadow(0 1px 0 rgba(255,255,255,0.3))",
+                }}
+              >  
+                {timeLabel}
+              </div>
+              {/* Specular sheen sweeping across the glass numerals */}
+              <motion.div
+                className="absolute inset-0 pointer-events-none"
+                style={{
+                  background: "linear-gradient(100deg, transparent 35%, rgba(255,255,255,0.6) 50%, transparent 65%)",
+                  mixBlendMode: "overlay",
+                }}
+                animate={{ x: ["-70%", "70%"] }}
+                transition={{ duration: 3.5, repeat: Infinity, ease: "easeInOut", repeatDelay: 2 }}
+              />
             </div>
 
             {/* Weather */}
             {showWeather && weather && (
               <motion.div
-                className="flex flex-col items-center mt-3 text-white"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
+                className="liquid-glass flex flex-col items-center mt-4 text-white rounded-[24px] px-6 py-3"
+                initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
                 transition={{ duration: 0.5, delay: 0.3 }}
               >
+                <div className="liquid-glass-sheen" />
                 <div className="flex items-center gap-2 text-lg font-medium" style={{ textShadow: "0 1px 8px rgba(0,0,0,0.3)" }}>
                   {getWeatherIcon(weather.condition, 18)}
                   <span>{weather.temp}°</span>
@@ -448,34 +491,28 @@ const WelcomeScreen = ({ onComplete }: WelcomeScreenProps) => {
             <motion.button
               type="button"
               onClick={toggleFlashlight}
-              className="absolute bottom-24 left-8 z-20 w-14 h-14 rounded-full flex items-center justify-center border border-white/20"
-              style={{
-                background: "rgba(255,255,255,0.18)",
-                backdropFilter: "blur(20px)",
-                WebkitBackdropFilter: "blur(20px)",
-              }}
+              className="liquid-glass absolute bottom-24 left-8 z-20 w-14 h-14 rounded-full flex items-center justify-center"
+              whileTap={{ scale: 0.9 }}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 20 }}
               transition={{ duration: 0.5, delay: 0.2 }}
             >
+              <div className="liquid-glass-sheen" />
               <Flashlight className={`w-6 h-6 ${torchOn ? "text-yellow-300" : "text-white"}`} />
             </motion.button>
 
             <motion.button
               type="button"
               onClick={openCamera}
-              className="absolute bottom-24 right-8 z-20 w-14 h-14 rounded-full flex items-center justify-center border border-white/20"
-              style={{
-                background: "rgba(255,255,255,0.18)",
-                backdropFilter: "blur(20px)",
-                WebkitBackdropFilter: "blur(20px)",
-              }}
+              className="liquid-glass absolute bottom-24 right-8 z-20 w-14 h-14 rounded-full flex items-center justify-center"
+              whileTap={{ scale: 0.9 }}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 20 }}
               transition={{ duration: 0.5, delay: 0.2 }}
             >
+              <div className="liquid-glass-sheen" />
               <Camera className="w-6 h-6 text-white" />
             </motion.button>
 
@@ -498,7 +535,7 @@ const WelcomeScreen = ({ onComplete }: WelcomeScreenProps) => {
       <AnimatePresence>
         {showSlider && (
           <motion.div
-            className="absolute bottom-2 z-20"
+            className="liquid-glass absolute bottom-2 z-20 rounded-full"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 20 }}
