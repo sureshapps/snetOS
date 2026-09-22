@@ -69,6 +69,7 @@ interface WelcomeConfig {
   timeGradientMid: string;
   timeGradientTo: string;
   timeGlowColor: string;
+  timeStretch: number;
   // Fingerprint unlock colors
   fingerprintIdleColor: string;
   fingerprintScanColorFrom: string;
@@ -119,6 +120,7 @@ const WelcomeSettings = () => {
     timeGradientMid: "#a9cdf7",
     timeGradientTo: "#ffffff",
     timeGlowColor: "#6fa8ff",
+    timeStretch: 1.3,
     fingerprintIdleColor: "#ffffff99",
     fingerprintScanColorFrom: "#b455f0",
     fingerprintScanColorMid: "#ff2fb0",
@@ -630,6 +632,21 @@ const WelcomeSettings = () => {
                   </div>
 
                   <div className="space-y-2">
+                    <Label className="text-white/80 text-sm">
+                      Number Height: {config.timeStretch.toFixed(2)}x
+                    </Label>
+                    <Slider
+                      value={[config.timeStretch]}
+                      onValueChange={([value]) => setConfig({ ...config, timeStretch: value })}
+                      min={1}
+                      max={1.8}
+                      step={0.05}
+                      className="py-2"
+                    />
+                    <p className="text-white/40 text-xs">Stretches the digits taller without widening them</p>
+                  </div>
+
+                  <div className="space-y-2">
                     <Label className="text-white/80 text-sm">Glow Color</Label>
                     <div className="flex gap-2">
                       <input
@@ -900,6 +917,9 @@ const WelcomeSettings = () => {
                       backgroundClip: "text",
                       color: "transparent",
                       filter: `drop-shadow(0 0 6px ${config.timeGlowColor}88)`,
+                      transform: `scaleY(${config.timeStretch})`,
+                      transformOrigin: "center",
+                      display: "inline-block",
                     }}
                   >
                     9:41
