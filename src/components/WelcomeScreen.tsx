@@ -37,6 +37,15 @@ interface WelcomeConfig {
   clockAmPmColor?: string;
   clockDateColor?: string;
   clockDateAccentColor?: string;
+  // Glass box behind the time/date
+  clockGlassEnabled?: boolean;
+  clockGlassBlur?: number;
+  clockGlassOpacity?: number;
+  // Spacing
+  clockLetterSpacing?: number;
+  clockLineSpacing?: number;
+  // Text effect: none | shadow | glow | neon | emboss | outline | threeD
+  clockTextEffect?: string;
   // Fingerprint unlock colors
   fingerprintIdleColor?: string;
   fingerprintScanColorFrom?: string;
@@ -80,6 +89,41 @@ interface DailyQuote {
   text: string;
   author: string;
 }
+
+// Text effects selectable for the lock screen clock in the admin panel.
+// Returns extra inline style properties layered on top of the base color.
+const getClockTextEffectStyle = (
+  effect: string | undefined,
+  color: string
+): React.CSSProperties => {
+  switch (effect) {
+    case "shadow":
+      return { textShadow: "0 4px 10px rgba(0,0,0,0.55)" };
+    case "glow":
+      return { textShadow: `0 0 8px ${color}, 0 0 18px ${color}99, 0 0 32px ${color}55` };
+    case "neon":
+      return {
+        textShadow: `0 0 4px #fff, 0 0 10px ${color}, 0 0 20px ${color}, 0 0 40px ${color}, 0 0 70px ${color}80`,
+      };
+    case "emboss":
+      return {
+        textShadow:
+          "0px 1px 0px rgba(255,255,255,0.45), 0px -1px 1px rgba(0,0,0,0.55), 1px 1px 0px rgba(255,255,255,0.15)",
+      };
+    case "outline":
+      return {
+        WebkitTextStroke: "1px rgba(0,0,0,0.8)",
+        textShadow: "0 1px 3px rgba(0,0,0,0.4)",
+      };
+    case "threeD":
+      return {
+        textShadow:
+          "1px 1px 0 rgba(0,0,0,0.5), 2px 2px 0 rgba(0,0,0,0.4), 3px 3px 0 rgba(0,0,0,0.3), 4px 4px 8px rgba(0,0,0,0.35)",
+      };
+    default:
+      return {};
+  }
+};
 
 // Used when no Quote API is configured, or the configured one fails —
 // cycles by day-of-year so it still "changes daily automatically".
@@ -366,6 +410,13 @@ const WelcomeScreen = ({ onComplete }: WelcomeScreenProps) => {
   const clockDateColor = config.clockDateColor || "#5a5a5a";
   const clockDateAccentColor = config.clockDateAccentColor || "#ffffff";
 
+  const clockGlassEnabled = config.clockGlassEnabled ?? false;
+  const clockGlassBlur = config.clockGlassBlur ?? 16;
+  const clockGlassOpacity = config.clockGlassOpacity ?? 12;
+  const clockLetterSpacing = config.clockLetterSpacing ?? 0;
+  const clockLineSpacing = config.clockLineSpacing ?? 0;
+  const clockTextEffect = config.clockTextEffect || "none";
+
   const fingerprintIdleColor = config.fingerprintIdleColor || "#ffffff99";
   const fingerprintScanFrom = config.fingerprintScanColorFrom || "#b455f0";
   const fingerprintScanMid = config.fingerprintScanColorMid || "#ff2fb0";
@@ -472,52 +523,78 @@ const WelcomeScreen = ({ onComplete }: WelcomeScreenProps) => {
             exit={{ opacity: 0, y: -20 }}
             transition={{ duration: 0.6, ease: "easeOut" }}
           >
-            {/* Hour : Minute */}
+            {/* Transparent glass box behind the time + date, with adjustable blur */}
             <div
+              className="flex flex-col items-center rounded-[28px] px-7 py-5 sm:px-9 sm:py-6"
               style={{
-                fontSize: "clamp(64px, 22vw, 100px)",
-                lineHeight: 1,
-                color: clockTimeColor,
+                backdropFilter: clockGlassEnabled ? `blur(${clockGlassBlur}px)` : undefined,
+                WebkitBackdropFilter: clockGlassEnabled ? `blur(${clockGlassBlur}px)` : undefined,
+                background: clockGlassEnabled ? `rgba(255,255,255,${clockGlassOpacity / 100})` : "transparent",
+                border: clockGlassEnabled ? "1px solid rgba(255,255,255,0.25)" : "none",
+                boxShadow: clockGlassEnabled ? "0 8px 32px rgba(0,0,0,0.18)" : "none",
+                transition: "backdrop-filter 0.3s ease, background 0.3s ease",
               }}
             >
-              {hrMin}
-            </div>
-
-            {/* Seconds + AM/PM */}
-            <div
-              style={{
-                fontSize: "clamp(36px, 13vw, 60px)",
-                marginTop: "clamp(-20px, -6vw, -12px)",
-                fontWeight: "bold",
-                color: clockAmPmColor,
-              }}
-            >
-              <span
+              {/* Hour : Minute */}
+              <div
                 style={{
-                  fontSize: "clamp(78px, 28vw, 130px)",
-                  fontWeight: "bold",
-                  color: clockSecondsColor,
+                  fontSize: "clamp(64px, 22vw, 100px)",
+                  lineHeight: 1,
+                  color: clockTimeColor,
+                  letterSpacing: `${clockLetterSpacing}px`,
+                  ...getClockTextEffectStyle(clockTextEffect, clockTimeColor),
                 }}
               >
-                {secondsStr}
-              </span>{" "}
-              {ampm}
-            </div>
+                {hrMin}
+              </div>
 
-            {/* Date */}
-            <div
-              style={{
-                fontSize: "clamp(16px, 6vw, 29px)",
-                textTransform: "uppercase",
-                marginTop: "clamp(-10px, -3vw, -6px)",
-                color: clockDateColor,
-              }}
-            >
-              {weekdayAbbr}{" "}
-              <span style={{ fontWeight: 800, color: clockDateAccentColor }}>
-                {monthAbbr} {dayNum}
-              </span>{" "}
-              {year}
+              {/* Seconds + AM/PM */}
+              <div
+                style={{
+                  fontSize: "clamp(36px, 13vw, 60px)",
+                  marginTop: `calc(clamp(-20px, -6vw, -12px) + ${clockLineSpacing}px)`,
+                  fontWeight: "bold",
+                  color: clockAmPmColor,
+                  letterSpacing: `${clockLetterSpacing}px`,
+                  ...getClockTextEffectStyle(clockTextEffect, clockAmPmColor),
+                }}
+              >
+                <span
+                  style={{
+                    fontSize: "clamp(78px, 28vw, 130px)",
+                    fontWeight: "bold",
+                    color: clockSecondsColor,
+                    ...getClockTextEffectStyle(clockTextEffect, clockSecondsColor),
+                  }}
+                >
+                  {secondsStr}
+                </span>{" "}
+                {ampm}
+              </div>
+
+              {/* Date */}
+              <div
+                style={{
+                  fontSize: "clamp(16px, 6vw, 29px)",
+                  textTransform: "uppercase",
+                  marginTop: `calc(clamp(-10px, -3vw, -6px) + ${clockLineSpacing}px)`,
+                  color: clockDateColor,
+                  letterSpacing: `${clockLetterSpacing}px`,
+                  ...getClockTextEffectStyle(clockTextEffect, clockDateColor),
+                }}
+              >
+                {weekdayAbbr}{" "}
+                <span
+                  style={{
+                    fontWeight: 800,
+                    color: clockDateAccentColor,
+                    ...getClockTextEffectStyle(clockTextEffect, clockDateAccentColor),
+                  }}
+                >
+                  {monthAbbr} {dayNum}
+                </span>{" "}
+                {year}
+              </div>
             </div>
 
             {/* Daily Quote */}
