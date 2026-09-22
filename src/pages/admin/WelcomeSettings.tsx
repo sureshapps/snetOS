@@ -34,6 +34,10 @@ const FONT_OPTIONS = [
   { value: "orbitron", label: "Orbitron", preview: "'Orbitron', sans-serif" },
   { value: "cinzel", label: "Cinzel", preview: "'Cinzel', serif" },
   { value: "cormorant", label: "Cormorant Garamond", preview: "'Cormorant Garamond', serif" },
+  { value: "fredoka", label: "Fredoka", preview: "'Fredoka', sans-serif" },
+  { value: "baloo2", label: "Baloo 2", preview: "'Baloo 2', sans-serif" },
+  { value: "quicksand", label: "Quicksand", preview: "'Quicksand', sans-serif" },
+  { value: "nunito", label: "Nunito", preview: "'Nunito', sans-serif" },
 ];
 
 interface WelcomeConfig {
@@ -55,8 +59,24 @@ interface WelcomeConfig {
   textShadowBlur: number;
   backgroundImage: string;
   useBackgroundImage: boolean;
-  showWeather: boolean;
   showQuickActions: boolean;
+  // Lock screen date / time / quote fonts
+  dateFont: string;
+  timeFont: string;
+  quoteFont: string;
+  // Liquid glass clock colors
+  timeGradientFrom: string;
+  timeGradientMid: string;
+  timeGradientTo: string;
+  timeGlowColor: string;
+  // Fingerprint unlock colors
+  fingerprintIdleColor: string;
+  fingerprintScanColorFrom: string;
+  fingerprintScanColorMid: string;
+  fingerprintScanColorTo: string;
+  // Daily quote
+  showQuote: boolean;
+  quoteApiUrl: string;
 }
 
 interface NotificationConfig {
@@ -91,8 +111,20 @@ const WelcomeSettings = () => {
     textShadowBlur: 10,
     backgroundImage: "",
     useBackgroundImage: false,
-    showWeather: true,
     showQuickActions: true,
+    dateFont: "quicksand",
+    timeFont: "fredoka",
+    quoteFont: "comfortaa",
+    timeGradientFrom: "#eaf3ff",
+    timeGradientMid: "#a9cdf7",
+    timeGradientTo: "#ffffff",
+    timeGlowColor: "#6fa8ff",
+    fingerprintIdleColor: "#ffffff99",
+    fingerprintScanColorFrom: "#b455f0",
+    fingerprintScanColorMid: "#ff2fb0",
+    fingerprintScanColorTo: "#ff3b3b",
+    showQuote: true,
+    quoteApiUrl: "",
   });
   
   const [notificationConfig, setNotificationConfig] = useState<NotificationConfig>({
@@ -492,6 +524,278 @@ const WelcomeSettings = () => {
                 </CardContent>
               </Card>
 
+              {/* Lock Screen Clock — Liquid Glass */}
+              <Card className="bg-white/5 border-white/10">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-white text-sm flex items-center gap-2">
+                    <Type className="w-4 h-4" />
+                    Lock Screen Clock (Liquid Glass)
+                  </CardTitle>
+                  <CardDescription className="text-white/60 text-xs">
+                    Font and glass color of the big "9:41"-style clock
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label className="text-white/80 text-sm">Time Font</Label>
+                      <Select
+                        value={config.timeFont}
+                        onValueChange={(value) => setConfig({ ...config, timeFont: value })}
+                      >
+                        <SelectTrigger className="bg-white/10 border-white/20 text-white">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {FONT_OPTIONS.map((font) => (
+                            <SelectItem key={font.value} value={font.value}>
+                              <span style={{ fontFamily: font.preview }}>{font.label}</span>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-white/80 text-sm">Date Font</Label>
+                      <Select
+                        value={config.dateFont}
+                        onValueChange={(value) => setConfig({ ...config, dateFont: value })}
+                      >
+                        <SelectTrigger className="bg-white/10 border-white/20 text-white">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {FONT_OPTIONS.map((font) => (
+                            <SelectItem key={font.value} value={font.value}>
+                              <span style={{ fontFamily: font.preview }}>{font.label}</span>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-white/80 text-sm">Glass Gradient</Label>
+                    <div className="grid grid-cols-3 gap-3">
+                      <div className="space-y-1">
+                        <Label className="text-white/60 text-xs">From</Label>
+                        <div className="flex gap-2">
+                          <input
+                            type="color"
+                            value={config.timeGradientFrom}
+                            onChange={(e) => setConfig({ ...config, timeGradientFrom: e.target.value })}
+                            className="w-10 h-10 rounded cursor-pointer"
+                          />
+                          <Input
+                            value={config.timeGradientFrom}
+                            onChange={(e) => setConfig({ ...config, timeGradientFrom: e.target.value })}
+                            className="bg-white/10 border-white/20 text-white text-xs"
+                          />
+                        </div>
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-white/60 text-xs">Mid</Label>
+                        <div className="flex gap-2">
+                          <input
+                            type="color"
+                            value={config.timeGradientMid}
+                            onChange={(e) => setConfig({ ...config, timeGradientMid: e.target.value })}
+                            className="w-10 h-10 rounded cursor-pointer"
+                          />
+                          <Input
+                            value={config.timeGradientMid}
+                            onChange={(e) => setConfig({ ...config, timeGradientMid: e.target.value })}
+                            className="bg-white/10 border-white/20 text-white text-xs"
+                          />
+                        </div>
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-white/60 text-xs">To</Label>
+                        <div className="flex gap-2">
+                          <input
+                            type="color"
+                            value={config.timeGradientTo}
+                            onChange={(e) => setConfig({ ...config, timeGradientTo: e.target.value })}
+                            className="w-10 h-10 rounded cursor-pointer"
+                          />
+                          <Input
+                            value={config.timeGradientTo}
+                            onChange={(e) => setConfig({ ...config, timeGradientTo: e.target.value })}
+                            className="bg-white/10 border-white/20 text-white text-xs"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-white/80 text-sm">Glow Color</Label>
+                    <div className="flex gap-2">
+                      <input
+                        type="color"
+                        value={config.timeGlowColor}
+                        onChange={(e) => setConfig({ ...config, timeGlowColor: e.target.value })}
+                        className="w-10 h-10 rounded cursor-pointer"
+                      />
+                      <Input
+                        value={config.timeGlowColor}
+                        onChange={(e) => setConfig({ ...config, timeGlowColor: e.target.value })}
+                        className="bg-white/10 border-white/20 text-white flex-1 text-xs"
+                      />
+                    </div>
+                    <p className="text-white/40 text-xs">Soft light bleeding around the numerals</p>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Fingerprint Unlock */}
+              <Card className="bg-white/5 border-white/10">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-white text-sm flex items-center gap-2">
+                    <Palette className="w-4 h-4" />
+                    Fingerprint Unlock
+                  </CardTitle>
+                  <CardDescription className="text-white/60 text-xs">
+                    "Scan to unlock" icon — idle color and the color it scans to while pressed
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <Label className="text-white/80 text-sm">Idle Color</Label>
+                    <div className="flex gap-2">
+                      <input
+                        type="color"
+                        value={config.fingerprintIdleColor.slice(0, 7)}
+                        onChange={(e) => setConfig({ ...config, fingerprintIdleColor: e.target.value })}
+                        className="w-10 h-10 rounded cursor-pointer"
+                      />
+                      <Input
+                        value={config.fingerprintIdleColor}
+                        onChange={(e) => setConfig({ ...config, fingerprintIdleColor: e.target.value })}
+                        className="bg-white/10 border-white/20 text-white flex-1 text-xs"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-white/80 text-sm">Scanning Gradient</Label>
+                    <div className="grid grid-cols-3 gap-3">
+                      <div className="space-y-1">
+                        <Label className="text-white/60 text-xs">From</Label>
+                        <div className="flex gap-2">
+                          <input
+                            type="color"
+                            value={config.fingerprintScanColorFrom}
+                            onChange={(e) => setConfig({ ...config, fingerprintScanColorFrom: e.target.value })}
+                            className="w-10 h-10 rounded cursor-pointer"
+                          />
+                          <Input
+                            value={config.fingerprintScanColorFrom}
+                            onChange={(e) => setConfig({ ...config, fingerprintScanColorFrom: e.target.value })}
+                            className="bg-white/10 border-white/20 text-white text-xs"
+                          />
+                        </div>
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-white/60 text-xs">Mid</Label>
+                        <div className="flex gap-2">
+                          <input
+                            type="color"
+                            value={config.fingerprintScanColorMid}
+                            onChange={(e) => setConfig({ ...config, fingerprintScanColorMid: e.target.value })}
+                            className="w-10 h-10 rounded cursor-pointer"
+                          />
+                          <Input
+                            value={config.fingerprintScanColorMid}
+                            onChange={(e) => setConfig({ ...config, fingerprintScanColorMid: e.target.value })}
+                            className="bg-white/10 border-white/20 text-white text-xs"
+                          />
+                        </div>
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-white/60 text-xs">To</Label>
+                        <div className="flex gap-2">
+                          <input
+                            type="color"
+                            value={config.fingerprintScanColorTo}
+                            onChange={(e) => setConfig({ ...config, fingerprintScanColorTo: e.target.value })}
+                            className="w-10 h-10 rounded cursor-pointer"
+                          />
+                          <Input
+                            value={config.fingerprintScanColorTo}
+                            onChange={(e) => setConfig({ ...config, fingerprintScanColorTo: e.target.value })}
+                            className="bg-white/10 border-white/20 text-white text-xs"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                    <p className="text-white/40 text-xs">Press and hold the fingerprint on the lock screen to preview the scan</p>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Daily Quote */}
+              <Card className="bg-white/5 border-white/10">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-white text-sm flex items-center gap-2">
+                    <MessageSquare className="w-4 h-4" />
+                    Daily Quote
+                  </CardTitle>
+                  <CardDescription className="text-white/60 text-xs">
+                    Shown below the clock, changes automatically once a day
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label className="text-white/80 text-sm">Show Quote</Label>
+                      <p className="text-white/40 text-xs">Display the daily quote on the lock screen</p>
+                    </div>
+                    <Switch
+                      checked={config.showQuote}
+                      onCheckedChange={(checked) => setConfig({ ...config, showQuote: checked })}
+                    />
+                  </div>
+
+                  {config.showQuote && (
+                    <>
+                      <div className="space-y-2">
+                        <Label className="text-white/80 text-sm">Quote Font</Label>
+                        <Select
+                          value={config.quoteFont}
+                          onValueChange={(value) => setConfig({ ...config, quoteFont: value })}
+                        >
+                          <SelectTrigger className="bg-white/10 border-white/20 text-white">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {FONT_OPTIONS.map((font) => (
+                              <SelectItem key={font.value} value={font.value}>
+                                <span style={{ fontFamily: font.preview }}>{font.label}</span>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label className="text-white/80 text-sm">Quote API URL</Label>
+                        <Input
+                          value={config.quoteApiUrl}
+                          onChange={(e) => setConfig({ ...config, quoteApiUrl: e.target.value })}
+                          placeholder="https://api.quotable.io/random (leave empty to use built-in quotes)"
+                          className="bg-white/10 border-white/20 text-white"
+                        />
+                        <p className="text-white/40 text-xs">
+                          Must return JSON with a quote/content field and an author field. Fetched once a day and cached — leave empty to cycle through a built-in list instead.
+                        </p>
+                      </div>
+                    </>
+                  )}
+                </CardContent>
+              </Card>
+
               {/* Lock Screen Elements */}
               <Card className="bg-white/5 border-white/10">
                 <CardHeader className="pb-3">
@@ -504,16 +808,6 @@ const WelcomeSettings = () => {
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <Label className="text-white/80 text-sm">Show Weather</Label>
-                      <p className="text-white/40 text-xs">Live temperature and conditions below the clock</p>
-                    </div>
-                    <Switch
-                      checked={config.showWeather}
-                      onCheckedChange={(checked) => setConfig({ ...config, showWeather: checked })}
-                    />
-                  </div>
                   <div className="flex items-center justify-between">
                     <div>
                       <Label className="text-white/80 text-sm">Show Flashlight &amp; Camera</Label>
@@ -577,6 +871,82 @@ const WelcomeSettings = () => {
                     <p className="text-white/40 text-sm relative z-10">Disabled</p>
                   )}
                 </div>
+              </div>
+
+              {/* Lock Screen Preview */}
+              <div className="space-y-2">
+                <Label className="text-white/80">Lock Screen Preview</Label>
+                <div
+                  className="aspect-[9/16] max-h-64 rounded-xl overflow-hidden border border-white/20 flex flex-col items-center pt-6 relative bg-[#0a0a12]"
+                >
+                  <div
+                    className="mb-1"
+                    style={{
+                      fontFamily: getFontFamily(config.dateFont),
+                      fontSize: "11px",
+                      color: "#ffffff",
+                    }}
+                  >
+                    Tuesday, 22 September
+                  </div>
+                  <div
+                    className="leading-[0.9]"
+                    style={{
+                      fontFamily: getFontFamily(config.timeFont),
+                      fontSize: "48px",
+                      fontWeight: 600,
+                      background: `linear-gradient(180deg, ${config.timeGradientFrom} 0%, ${config.timeGradientMid} 50%, ${config.timeGradientTo} 100%)`,
+                      WebkitBackgroundClip: "text",
+                      backgroundClip: "text",
+                      color: "transparent",
+                      filter: `drop-shadow(0 0 6px ${config.timeGlowColor}88)`,
+                    }}
+                  >
+                    9:41
+                  </div>
+                  {config.showQuote && (
+                    <div
+                      className="text-center px-6 mt-2 text-[9px] leading-tight text-white/80"
+                      style={{ fontFamily: getFontFamily(config.quoteFont) }}
+                    >
+                      "The happiness of your life depends on the quality of your thoughts." — Marcus Aurelius
+                    </div>
+                  )}
+                  <div className="flex-1" />
+                  <svg width="0" height="0" style={{ position: "absolute" }}>
+                    <defs>
+                      <linearGradient id="preview-fingerprint-gradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                        <stop offset="0%" stopColor={config.fingerprintScanColorFrom} />
+                        <stop offset="50%" stopColor={config.fingerprintScanColorMid} />
+                        <stop offset="100%" stopColor={config.fingerprintScanColorTo} />
+                      </linearGradient>
+                    </defs>
+                  </svg>
+                  <svg
+                    viewBox="0 0 24 24"
+                    className="w-8 h-8 mb-1"
+                    fill="none"
+                    stroke="url(#preview-fingerprint-gradient)"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                  >
+                    <path d="M12 11c0 3.517-1.009 6.799-2.753 9.571M12 11c0-1.657 1.343-3 3-3s3 1.343 3 3c0 3.269-.641 6.386-1.804 9.243M12 11c0-3.313-2.687-6-6-6-1.5 0-2.87.552-3.921 1.464M12 11c0-4.97-4.03-9-9-9-.848 0-1.669.117-2.447.335M12 3.006A9 9 0 0121 12c0 .424-.024.842-.07 1.253" />
+                  </svg>
+                  <p className="text-white/60 text-[9px] mb-4" style={{ fontFamily: getFontFamily(config.quoteFont) }}>
+                    scan to unlock
+                  </p>
+                  {config.showQuickActions && (
+                    <div className="absolute bottom-3 left-0 right-0 flex justify-between px-4">
+                      <div className="w-6 h-6 rounded-full bg-black flex items-center justify-center">
+                        <div className="w-2.5 h-2.5 border border-white/70 rounded-[1px]" />
+                      </div>
+                      <div className="w-6 h-6 rounded-full bg-black flex items-center justify-center">
+                        <div className="w-2.5 h-2.5 border border-white/70 rounded-full" />
+                      </div>
+                    </div>
+                  )}
+                </div>
+                <p className="text-white/40 text-xs">Approximate — fonts render using the live preview above once saved</p>
               </div>
             </CardContent>
           </Card>
