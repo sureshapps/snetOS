@@ -83,6 +83,18 @@ const FONT_MAP: Record<string, string> = {
   baloo2: "'Baloo 2', sans-serif",
   quicksand: "'Quicksand', sans-serif",
   nunito: "'Nunito', sans-serif",
+  smoochsans: "'Smooch Sans', sans-serif",
+  livvic: "'Livvic', sans-serif",
+  sairacondensed: "'Saira Condensed', sans-serif",
+  viga: "'Viga', sans-serif",
+  montserratalternates: "'Montserrat Alternates', sans-serif",
+  adventpro: "'Advent Pro', sans-serif",
+  antonio: "'Antonio', sans-serif",
+  caacupeone: "'Caacupe One', sans-serif",
+  // Not on Google Fonts — GitHub's own open-source fonts. Included so they
+  // can be selected, but they need to be self-hosted (see note) to render.
+  hubotsans: "'Hubot Sans', sans-serif",
+  monasans: "'Mona Sans', sans-serif",
 };
 
 interface DailyQuote {
