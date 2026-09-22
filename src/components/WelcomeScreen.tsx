@@ -162,6 +162,12 @@ const WelcomeScreen = ({ onComplete }: WelcomeScreenProps) => {
   // Daily quote
   const [quote, setQuote] = useState<DailyQuote | null>(null);
 
+  // Background image load state — if the configured image fails to load
+  // (bad URL, CORS/hotlink block, deleted file) we fall back to the gradient
+  // instead of silently showing nothing.
+  const [bgImageLoaded, setBgImageLoaded] = useState(false);
+  const [bgImageError, setBgImageError] = useState(false);
+
   // Fingerprint scan-to-unlock
   const [isScanning, setIsScanning] = useState(false);
   const scanTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -232,6 +238,23 @@ const WelcomeScreen = ({ onComplete }: WelcomeScreenProps) => {
     if (!showSlider || config?.showQuote === false || quote) return;
     fetchDailyQuote(config?.quoteApiUrl).then(setQuote);
   }, [showSlider, config?.showQuote, config?.quoteApiUrl, quote]);
+
+  // Reset load/error state whenever the configured background image changes,
+  // and eagerly preload it so we know if it's actually reachable.
+  useEffect(() => {
+    setBgImageLoaded(false);
+    setBgImageError(false);
+
+    if (!config?.useBackgroundImage || !config?.backgroundImage) return;
+
+    const img = new Image();
+    img.onload = () => setBgImageLoaded(true);
+    img.onerror = () => {
+      console.error("Welcome screen background image failed to load:", config.backgroundImage);
+      setBgImageError(true);
+    };
+    img.src = config.backgroundImage;
+  }, [config?.useBackgroundImage, config?.backgroundImage]);
 
   // Cleanup the torch track and any pending scan timeout on unmount
   useEffect(() => {
@@ -356,24 +379,30 @@ const WelcomeScreen = ({ onComplete }: WelcomeScreenProps) => {
       exit={{ opacity: 0 }}
       transition={{ duration: 0.5 }}
     >
-      {/* Background - Image or Gradient */}
-      {config.useBackgroundImage && config.backgroundImage ? (
+      {/* Background - Image or Gradient. This single layer sits behind both the
+          welcome-text phase and the lock-screen/clock phase below, since both
+          are rendered inside this same fixed full-screen container. */}
+      <div
+        className="absolute inset-0"
+        style={{
+          background: `linear-gradient(to bottom right, ${config.gradientFrom}, ${config.gradientVia}, ${config.gradientTo})`
+        }}
+      />
+      {config.useBackgroundImage && config.backgroundImage && !bgImageError && (
         <>
-          <div 
-            className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-            style={{
-              backgroundImage: `url(${config.backgroundImage})`
+          <img
+            src={config.backgroundImage}
+            alt=""
+            className="absolute inset-0 w-full h-full object-cover transition-opacity duration-300"
+            style={{ opacity: bgImageLoaded ? 1 : 0 }}
+            onLoad={() => setBgImageLoaded(true)}
+            onError={() => {
+              console.error("Welcome screen background image failed to load:", config.backgroundImage);
+              setBgImageError(true);
             }}
           />
           <div className="absolute inset-0 bg-black/20" />
         </>
-      ) : (
-        <div 
-          className="absolute inset-0" 
-          style={{
-            background: `linear-gradient(to bottom right, ${config.gradientFrom}, ${config.gradientVia}, ${config.gradientTo})`
-          }}
-        />
       )}
 
       {/* Animated Welcome Text (only before the lock face appears) */}
@@ -458,7 +487,7 @@ const WelcomeScreen = ({ onComplete }: WelcomeScreenProps) => {
             <div
               style={{
                 fontSize: "clamp(36px, 13vw, 60px)",
-                marginTop: "clamp(-33px, -6vw, -12px)",
+                marginTop: "clamp(-20px, -6vw, -12px)",
                 fontWeight: "bold",
                 color: clockAmPmColor,
               }}
