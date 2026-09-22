@@ -60,16 +60,15 @@ interface WelcomeConfig {
   backgroundImage: string;
   useBackgroundImage: boolean;
   showQuickActions: boolean;
-  // Lock screen date / time / quote fonts
-  dateFont: string;
-  timeFont: string;
+  // Lock screen quote font
   quoteFont: string;
-  // Liquid glass clock colors
-  timeGradientFrom: string;
-  timeGradientMid: string;
-  timeGradientTo: string;
-  timeGlowColor: string;
-  timeStretch: number;
+  // Simple clock: one font, plain colors, no glow
+  clockFont: string;
+  clockTimeColor: string;
+  clockSecondsColor: string;
+  clockAmPmColor: string;
+  clockDateColor: string;
+  clockDateAccentColor: string;
   // Fingerprint unlock colors
   fingerprintIdleColor: string;
   fingerprintScanColorFrom: string;
@@ -113,14 +112,13 @@ const WelcomeSettings = () => {
     backgroundImage: "",
     useBackgroundImage: false,
     showQuickActions: true,
-    dateFont: "quicksand",
-    timeFont: "fredoka",
     quoteFont: "comfortaa",
-    timeGradientFrom: "#eaf3ff",
-    timeGradientMid: "#a9cdf7",
-    timeGradientTo: "#ffffff",
-    timeGlowColor: "#6fa8ff",
-    timeStretch: 1.3,
+    clockFont: "roboto",
+    clockTimeColor: "#ffffff",
+    clockSecondsColor: "#4a4848",
+    clockAmPmColor: "#F44336",
+    clockDateColor: "#5a5a5a",
+    clockDateAccentColor: "#ffffff",
     fingerprintIdleColor: "#ffffff99",
     fingerprintScanColorFrom: "#b455f0",
     fingerprintScanColorMid: "#ff2fb0",
@@ -526,142 +524,127 @@ const WelcomeSettings = () => {
                 </CardContent>
               </Card>
 
-              {/* Lock Screen Clock — Liquid Glass */}
+              {/* Lock Screen Clock — Simple Clock */}
               <Card className="bg-white/5 border-white/10">
                 <CardHeader className="pb-3">
                   <CardTitle className="text-white text-sm flex items-center gap-2">
                     <Type className="w-4 h-4" />
-                    Lock Screen Clock (Liquid Glass)
+                    Lock Screen Clock
                   </CardTitle>
                   <CardDescription className="text-white/60 text-xs">
-                    Font and glass color of the big "9:41"-style clock
+                    Plain clock — hour:minute, seconds with AM/PM, and the date line below it
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label className="text-white/80 text-sm">Clock Font</Label>
+                    <Select
+                      value={config.clockFont}
+                      onValueChange={(value) => setConfig({ ...config, clockFont: value })}
+                    >
+                      <SelectTrigger className="bg-white/10 border-white/20 text-white">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {FONT_OPTIONS.map((font) => (
+                          <SelectItem key={font.value} value={font.value}>
+                            <span style={{ fontFamily: font.preview }}>{font.label}</span>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-white/40 text-xs">Used for the time, seconds and date</p>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label className="text-white/80 text-sm">Time Font</Label>
-                      <Select
-                        value={config.timeFont}
-                        onValueChange={(value) => setConfig({ ...config, timeFont: value })}
-                      >
-                        <SelectTrigger className="bg-white/10 border-white/20 text-white">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {FONT_OPTIONS.map((font) => (
-                            <SelectItem key={font.value} value={font.value}>
-                              <span style={{ fontFamily: font.preview }}>{font.label}</span>
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <Label className="text-white/80 text-sm">Time Color</Label>
+                      <div className="flex gap-2">
+                        <input
+                          type="color"
+                          value={config.clockTimeColor}
+                          onChange={(e) => setConfig({ ...config, clockTimeColor: e.target.value })}
+                          className="w-10 h-10 rounded cursor-pointer"
+                        />
+                        <Input
+                          value={config.clockTimeColor}
+                          onChange={(e) => setConfig({ ...config, clockTimeColor: e.target.value })}
+                          className="bg-white/10 border-white/20 text-white flex-1 text-xs"
+                        />
+                      </div>
+                      <p className="text-white/40 text-xs">The big HH:MM</p>
                     </div>
                     <div className="space-y-2">
-                      <Label className="text-white/80 text-sm">Date Font</Label>
-                      <Select
-                        value={config.dateFont}
-                        onValueChange={(value) => setConfig({ ...config, dateFont: value })}
-                      >
-                        <SelectTrigger className="bg-white/10 border-white/20 text-white">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {FONT_OPTIONS.map((font) => (
-                            <SelectItem key={font.value} value={font.value}>
-                              <span style={{ fontFamily: font.preview }}>{font.label}</span>
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <Label className="text-white/80 text-sm">Seconds Color</Label>
+                      <div className="flex gap-2">
+                        <input
+                          type="color"
+                          value={config.clockSecondsColor}
+                          onChange={(e) => setConfig({ ...config, clockSecondsColor: e.target.value })}
+                          className="w-10 h-10 rounded cursor-pointer"
+                        />
+                        <Input
+                          value={config.clockSecondsColor}
+                          onChange={(e) => setConfig({ ...config, clockSecondsColor: e.target.value })}
+                          className="bg-white/10 border-white/20 text-white flex-1 text-xs"
+                        />
+                      </div>
+                      <p className="text-white/40 text-xs">The large seconds digits</p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label className="text-white/80 text-sm">AM/PM Color</Label>
+                      <div className="flex gap-2">
+                        <input
+                          type="color"
+                          value={config.clockAmPmColor}
+                          onChange={(e) => setConfig({ ...config, clockAmPmColor: e.target.value })}
+                          className="w-10 h-10 rounded cursor-pointer"
+                        />
+                        <Input
+                          value={config.clockAmPmColor}
+                          onChange={(e) => setConfig({ ...config, clockAmPmColor: e.target.value })}
+                          className="bg-white/10 border-white/20 text-white flex-1 text-xs"
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-white/80 text-sm">Date Color</Label>
+                      <div className="flex gap-2">
+                        <input
+                          type="color"
+                          value={config.clockDateColor}
+                          onChange={(e) => setConfig({ ...config, clockDateColor: e.target.value })}
+                          className="w-10 h-10 rounded cursor-pointer"
+                        />
+                        <Input
+                          value={config.clockDateColor}
+                          onChange={(e) => setConfig({ ...config, clockDateColor: e.target.value })}
+                          className="bg-white/10 border-white/20 text-white flex-1 text-xs"
+                        />
+                      </div>
+                      <p className="text-white/40 text-xs">Weekday &amp; year (muted part)</p>
                     </div>
                   </div>
 
                   <div className="space-y-2">
-                    <Label className="text-white/80 text-sm">Glass Gradient</Label>
-                    <div className="grid grid-cols-3 gap-3">
-                      <div className="space-y-1">
-                        <Label className="text-white/60 text-xs">From</Label>
-                        <div className="flex gap-2">
-                          <input
-                            type="color"
-                            value={config.timeGradientFrom}
-                            onChange={(e) => setConfig({ ...config, timeGradientFrom: e.target.value })}
-                            className="w-10 h-10 rounded cursor-pointer"
-                          />
-                          <Input
-                            value={config.timeGradientFrom}
-                            onChange={(e) => setConfig({ ...config, timeGradientFrom: e.target.value })}
-                            className="bg-white/10 border-white/20 text-white text-xs"
-                          />
-                        </div>
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="text-white/60 text-xs">Mid</Label>
-                        <div className="flex gap-2">
-                          <input
-                            type="color"
-                            value={config.timeGradientMid}
-                            onChange={(e) => setConfig({ ...config, timeGradientMid: e.target.value })}
-                            className="w-10 h-10 rounded cursor-pointer"
-                          />
-                          <Input
-                            value={config.timeGradientMid}
-                            onChange={(e) => setConfig({ ...config, timeGradientMid: e.target.value })}
-                            className="bg-white/10 border-white/20 text-white text-xs"
-                          />
-                        </div>
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="text-white/60 text-xs">To</Label>
-                        <div className="flex gap-2">
-                          <input
-                            type="color"
-                            value={config.timeGradientTo}
-                            onChange={(e) => setConfig({ ...config, timeGradientTo: e.target.value })}
-                            className="w-10 h-10 rounded cursor-pointer"
-                          />
-                          <Input
-                            value={config.timeGradientTo}
-                            onChange={(e) => setConfig({ ...config, timeGradientTo: e.target.value })}
-                            className="bg-white/10 border-white/20 text-white text-xs"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label className="text-white/80 text-sm">
-                      Number Height: {config.timeStretch.toFixed(2)}x
-                    </Label>
-                    <Slider
-                      value={[config.timeStretch]}
-                      onValueChange={([value]) => setConfig({ ...config, timeStretch: value })}
-                      min={1}
-                      max={1.8}
-                      step={0.05}
-                      className="py-2"
-                    />
-                    <p className="text-white/40 text-xs">Stretches the digits taller without widening them</p>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label className="text-white/80 text-sm">Glow Color</Label>
+                    <Label className="text-white/80 text-sm">Date Accent Color</Label>
                     <div className="flex gap-2">
                       <input
                         type="color"
-                        value={config.timeGlowColor}
-                        onChange={(e) => setConfig({ ...config, timeGlowColor: e.target.value })}
+                        value={config.clockDateAccentColor}
+                        onChange={(e) => setConfig({ ...config, clockDateAccentColor: e.target.value })}
                         className="w-10 h-10 rounded cursor-pointer"
                       />
                       <Input
-                        value={config.timeGlowColor}
-                        onChange={(e) => setConfig({ ...config, timeGlowColor: e.target.value })}
+                        value={config.clockDateAccentColor}
+                        onChange={(e) => setConfig({ ...config, clockDateAccentColor: e.target.value })}
                         className="bg-white/10 border-white/20 text-white flex-1 text-xs"
                       />
                     </div>
-                    <p className="text-white/40 text-xs">Soft light bleeding around the numerals</p>
+                    <p className="text-white/40 text-xs">Bold month + day in the date line</p>
                   </div>
                 </CardContent>
               </Card>
@@ -897,32 +880,36 @@ const WelcomeSettings = () => {
                   className="aspect-[9/16] max-h-64 rounded-xl overflow-hidden border border-white/20 flex flex-col items-center pt-6 relative bg-[#0a0a12]"
                 >
                   <div
-                    className="mb-1"
-                    style={{
-                      fontFamily: getFontFamily(config.dateFont),
-                      fontSize: "11px",
-                      color: "#ffffff",
-                    }}
-                  >
-                    Tuesday, 22 September
-                  </div>
-                  <div
                     className="leading-[0.9]"
                     style={{
-                      fontFamily: getFontFamily(config.timeFont),
-                      fontSize: "48px",
-                      fontWeight: 600,
-                      background: `linear-gradient(180deg, ${config.timeGradientFrom} 0%, ${config.timeGradientMid} 50%, ${config.timeGradientTo} 100%)`,
-                      WebkitBackgroundClip: "text",
-                      backgroundClip: "text",
-                      color: "transparent",
-                      filter: `drop-shadow(0 0 6px ${config.timeGlowColor}88)`,
-                      transform: `scaleY(${config.timeStretch})`,
-                      transformOrigin: "center",
-                      display: "inline-block",
+                      fontFamily: getFontFamily(config.clockFont),
+                      fontSize: "44px",
+                      color: config.clockTimeColor,
                     }}
                   >
-                    9:41
+                    05:09
+                  </div>
+                  <div
+                    style={{
+                      fontFamily: getFontFamily(config.clockFont),
+                      fontSize: "20px",
+                      fontWeight: 700,
+                      color: config.clockAmPmColor,
+                      marginTop: "-4px",
+                    }}
+                  >
+                    <span style={{ fontSize: "34px", color: config.clockSecondsColor }}>32</span> AM
+                  </div>
+                  <div
+                    style={{
+                      fontFamily: getFontFamily(config.clockFont),
+                      fontSize: "10px",
+                      textTransform: "uppercase",
+                      color: config.clockDateColor,
+                      marginTop: "-2px",
+                    }}
+                  >
+                    Tue <span style={{ fontWeight: 800, color: config.clockDateAccentColor }}>Sep 22</span> 2026
                   </div>
                   {config.showQuote && (
                     <div
