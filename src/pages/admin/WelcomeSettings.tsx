@@ -8,7 +8,7 @@ import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Check, Palette, MessageSquare, Type } from "lucide-react";
+import { Check, Palette, MessageSquare, Type, Upload, Loader2 } from "lucide-react";
 import AdminHeader from "@/components/admin/AdminHeader";
 
 const FONT_OPTIONS = [
@@ -141,6 +141,48 @@ const WelcomeSettings = () => {
   
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [uploadingBackground, setUploadingBackground] = useState(false);
+
+  // Uploads the chosen file to Supabase Storage and stores the public URL.
+  // This avoids the most common cause of a "missing" background image:
+  // a pasted link that isn't a direct, publicly-reachable image URL
+  // (e.g. a Google Drive/Dropbox share page, or a host that blocks hotlinking).
+  const handleBackgroundImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // allow re-selecting the same file later
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please choose an image file");
+      return;
+    }
+
+    setUploadingBackground(true);
+    try {
+      const ext = file.name.split(".").pop();
+      const path = `welcome-background-${Date.now()}.${ext}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("site-assets")
+        .upload(path, file, { upsert: true, cacheControl: "3600" });
+
+      if (uploadError) throw uploadError;
+
+      const { data: publicUrlData } = supabase.storage
+        .from("site-assets")
+        .getPublicUrl(path);
+
+      setConfig((prev) => ({ ...prev, backgroundImage: publicUrlData.publicUrl }));
+      toast.success("Background image uploaded");
+    } catch (error) {
+      console.error("Error uploading background image:", error);
+      toast.error(
+        "Upload failed. Make sure a public 'site-assets' storage bucket exists in Supabase."
+      );
+    } finally {
+      setUploadingBackground(false);
+    }
+  };
 
   useEffect(() => {
     loadSettings();
@@ -499,14 +541,47 @@ const WelcomeSettings = () => {
                   </div>
                   
                   {config.useBackgroundImage && (
-                    <div className="space-y-2">
-                      <Label className="text-white/80 text-sm">Image URL</Label>
-                      <Input
-                        value={config.backgroundImage}
-                        onChange={(e) => setConfig({ ...config, backgroundImage: e.target.value })}
-                        placeholder="https://example.com/image.jpg"
-                        className="bg-white/10 border-white/20 text-white"
-                      />
+                    <div className="space-y-3">
+                      <div className="space-y-2">
+                        <Label className="text-white/80 text-sm">Upload Image</Label>
+                        <label className="flex items-center justify-center gap-2 w-full h-10 rounded-md border border-dashed border-white/30 text-white/70 text-sm cursor-pointer hover:bg-white/5 transition-colors">
+                          {uploadingBackground ? (
+                            <>
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                              Uploading...
+                            </>
+                          ) : (
+                            <>
+                              <Upload className="w-4 h-4" />
+                              Choose image file
+                            </>
+                          )}
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={handleBackgroundImageUpload}
+                            disabled={uploadingBackground}
+                          />
+                        </label>
+                        <p className="text-white/40 text-xs">
+                          Uploads directly so it always resolves — more reliable than pasting a link.
+                        </p>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label className="text-white/80 text-sm">Or paste Image URL</Label>
+                        <Input
+                          value={config.backgroundImage}
+                          onChange={(e) => setConfig({ ...config, backgroundImage: e.target.value })}
+                          placeholder="https://example.com/image.jpg"
+                          className="bg-white/10 border-white/20 text-white"
+                        />
+                        <p className="text-white/40 text-xs">
+                          Must be a direct link to the image file, not a share/viewer page (Google Drive, Dropbox, etc. won't work).
+                        </p>
+                      </div>
+
                       {config.backgroundImage && (
                         <div className="mt-2 rounded-lg overflow-hidden border border-white/20 aspect-video">
                           <img 
