@@ -38,6 +38,17 @@ const FONT_OPTIONS = [
   { value: "baloo2", label: "Baloo 2", preview: "'Baloo 2', sans-serif" },
   { value: "quicksand", label: "Quicksand", preview: "'Quicksand', sans-serif" },
   { value: "nunito", label: "Nunito", preview: "'Nunito', sans-serif" },
+  { value: "smoochsans", label: "Smooch Sans", preview: "'Smooch Sans', sans-serif" },
+  { value: "livvic", label: "Livvic", preview: "'Livvic', sans-serif" },
+  { value: "sairacondensed", label: "Saira Condensed", preview: "'Saira Condensed', sans-serif" },
+  { value: "viga", label: "Viga", preview: "'Viga', sans-serif" },
+  { value: "montserratalternates", label: "Montserrat Alternates", preview: "'Montserrat Alternates', sans-serif" },
+  { value: "adventpro", label: "Advent Pro", preview: "'Advent Pro', sans-serif" },
+  { value: "antonio", label: "Antonio", preview: "'Antonio', sans-serif" },
+  { value: "caacupeone", label: "Caacupe One", preview: "'Caacupe One', sans-serif" },
+  // Not on Google Fonts — GitHub's own open-source fonts, need self-hosting to render (see chat note)
+  { value: "hubotsans", label: "Hubot Sans", preview: "'Hubot Sans', sans-serif" },
+  { value: "monasans", label: "Mona Sans", preview: "'Mona Sans', sans-serif" },
 ];
 
 interface WelcomeConfig {
