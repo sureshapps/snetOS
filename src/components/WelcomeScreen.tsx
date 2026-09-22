@@ -458,7 +458,7 @@ const WelcomeScreen = ({ onComplete }: WelcomeScreenProps) => {
             <div
               style={{
                 fontSize: "clamp(36px, 13vw, 60px)",
-                marginTop: "clamp(-20px, -6vw, -12px)",
+                marginTop: "clamp(-33px, -6vw, -12px)",
                 fontWeight: "bold",
                 color: clockAmPmColor,
               }}
