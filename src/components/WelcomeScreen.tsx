@@ -573,7 +573,7 @@ const WelcomeScreen = ({ onComplete }: WelcomeScreenProps) => {
               >
                 <span
                   style={{
-                    fontSize: "clamp(78px, 28vw, 130px)",
+                    fontSize: "clamp(64px, 22vw, 100px)",
                     fontWeight: "bold",
                     color: clockSecondsColor,
                     ...getClockTextEffectStyle(clockTextEffect, clockSecondsColor),
