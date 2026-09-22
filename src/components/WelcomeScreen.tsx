@@ -37,6 +37,7 @@ interface WelcomeConfig {
   timeGradientMid?: string;
   timeGradientTo?: string;
   timeGlowColor?: string;
+  timeStretch?: number;
   // Fingerprint unlock colors
   fingerprintIdleColor?: string;
   fingerprintScanColorFrom?: string;
@@ -341,6 +342,7 @@ const WelcomeScreen = ({ onComplete }: WelcomeScreenProps) => {
   const timeGradientMid = config.timeGradientMid || "#a9cdf7";
   const timeGradientTo = config.timeGradientTo || "#ffffff";
   const timeGlowColor = config.timeGlowColor || "#6fa8ff";
+  const timeStretch = config.timeStretch || 1.3;
 
   const fingerprintIdleColor = config.fingerprintIdleColor || "#ffffff99";
   const fingerprintScanFrom = config.fingerprintScanColorFrom || "#b455f0";
@@ -452,7 +454,7 @@ const WelcomeScreen = ({ onComplete }: WelcomeScreenProps) => {
               {dateLabel}
             </div>
 
-            {/* Time — liquid glass numerals */}
+            {/* Time — liquid glass numerals, stretched taller */}
             <div className="relative">
               <div
                 className="
@@ -471,20 +473,13 @@ const WelcomeScreen = ({ onComplete }: WelcomeScreenProps) => {
                   color: "transparent",
                   textShadow: `0 8px 40px rgba(0,0,0,0.4)`,
                   filter: `drop-shadow(0 0 24px ${timeGlowColor}77) drop-shadow(0 1px 0 rgba(255,255,255,0.4))`,
+                  transform: `scaleY(${timeStretch})`,
+                  transformOrigin: "center",
+                  display: "inline-block",
                 }}
               >  
                 {timeLabel}
               </div>
-              {/* Specular sheen sweeping across the glass numerals */}
-              <motion.div
-                className="absolute inset-0 pointer-events-none"
-                style={{
-                  background: "linear-gradient(100deg, transparent 35%, rgba(255,255,255,0.65) 50%, transparent 65%)",
-                  mixBlendMode: "overlay",
-                }}
-                animate={{ x: ["-70%", "70%"] }}
-                transition={{ duration: 3.5, repeat: Infinity, ease: "easeInOut", repeatDelay: 2 }}
-              />
             </div>
 
             {/* Daily Quote */}
