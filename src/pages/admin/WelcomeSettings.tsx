@@ -69,6 +69,15 @@ interface WelcomeConfig {
   clockAmPmColor: string;
   clockDateColor: string;
   clockDateAccentColor: string;
+  // Glass box behind the time/date
+  clockGlassEnabled: boolean;
+  clockGlassBlur: number;
+  clockGlassOpacity: number;
+  // Spacing
+  clockLetterSpacing: number;
+  clockLineSpacing: number;
+  // Text effect
+  clockTextEffect: string;
   // Fingerprint unlock colors
   fingerprintIdleColor: string;
   fingerprintScanColorFrom: string;
@@ -90,6 +99,35 @@ interface NotificationConfig {
   nameColor: string;
   messageColor: string;
 }
+
+// Mirrors the effect rendering used on the live welcome screen, so the
+// admin preview shows an accurate approximation of the selected effect.
+const getPreviewTextEffectStyle = (effect: string, color: string): React.CSSProperties => {
+  switch (effect) {
+    case "shadow":
+      return { textShadow: "0 4px 10px rgba(0,0,0,0.55)" };
+    case "glow":
+      return { textShadow: `0 0 8px ${color}, 0 0 18px ${color}99, 0 0 32px ${color}55` };
+    case "neon":
+      return {
+        textShadow: `0 0 4px #fff, 0 0 10px ${color}, 0 0 20px ${color}, 0 0 40px ${color}, 0 0 70px ${color}80`,
+      };
+    case "emboss":
+      return {
+        textShadow:
+          "0px 1px 0px rgba(255,255,255,0.45), 0px -1px 1px rgba(0,0,0,0.55), 1px 1px 0px rgba(255,255,255,0.15)",
+      };
+    case "outline":
+      return { WebkitTextStroke: "1px rgba(0,0,0,0.8)", textShadow: "0 1px 3px rgba(0,0,0,0.4)" };
+    case "threeD":
+      return {
+        textShadow:
+          "1px 1px 0 rgba(0,0,0,0.5), 2px 2px 0 rgba(0,0,0,0.4), 3px 3px 0 rgba(0,0,0,0.3), 4px 4px 8px rgba(0,0,0,0.35)",
+      };
+    default:
+      return {};
+  }
+};
 
 const WelcomeSettings = () => {
   const [config, setConfig] = useState<WelcomeConfig>({
@@ -119,6 +157,12 @@ const WelcomeSettings = () => {
     clockAmPmColor: "#F44336",
     clockDateColor: "#5a5a5a",
     clockDateAccentColor: "#ffffff",
+    clockGlassEnabled: false,
+    clockGlassBlur: 16,
+    clockGlassOpacity: 12,
+    clockLetterSpacing: 0,
+    clockLineSpacing: 0,
+    clockTextEffect: "none",
     fingerprintIdleColor: "#ffffff99",
     fingerprintScanColorFrom: "#b455f0",
     fingerprintScanColorMid: "#ff2fb0",
@@ -721,6 +765,119 @@ const WelcomeSettings = () => {
                     </div>
                     <p className="text-white/40 text-xs">Bold month + day in the date line</p>
                   </div>
+
+                  {/* Text Effect */}
+                  <div className="space-y-2">
+                    <Label className="text-white/80 text-sm">Text Effect</Label>
+                    <Select
+                      value={config.clockTextEffect}
+                      onValueChange={(value) => setConfig({ ...config, clockTextEffect: value })}
+                    >
+                      <SelectTrigger className="bg-white/10 border-white/20 text-white">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">None</SelectItem>
+                        <SelectItem value="shadow">Drop Shadow</SelectItem>
+                        <SelectItem value="glow">Glow</SelectItem>
+                        <SelectItem value="neon">Neon</SelectItem>
+                        <SelectItem value="emboss">Emboss</SelectItem>
+                        <SelectItem value="outline">Outline</SelectItem>
+                        <SelectItem value="threeD">3D</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <p className="text-white/40 text-xs">Applied to the time, seconds, AM/PM and date text</p>
+                  </div>
+
+                  {/* Letter Spacing */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-white/80 text-sm">Letter Spacing</Label>
+                      <span className="text-white/50 text-xs">{config.clockLetterSpacing}px</span>
+                    </div>
+                    <Slider
+                      value={[config.clockLetterSpacing]}
+                      onValueChange={([value]) => setConfig({ ...config, clockLetterSpacing: value })}
+                      min={0}
+                      max={20}
+                      step={1}
+                    />
+                    <p className="text-white/40 text-xs">Space between characters in the numbers and words</p>
+                  </div>
+
+                  {/* Line Spacing */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-white/80 text-sm">Line Spacing</Label>
+                      <span className="text-white/50 text-xs">{config.clockLineSpacing}px</span>
+                    </div>
+                    <Slider
+                      value={[config.clockLineSpacing]}
+                      onValueChange={([value]) => setConfig({ ...config, clockLineSpacing: value })}
+                      min={-20}
+                      max={40}
+                      step={1}
+                    />
+                    <p className="text-white/40 text-xs">Extra vertical gap between the time, seconds and date lines</p>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Time & Date Glass Box */}
+              <Card className="bg-white/5 border-white/10">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-white text-sm flex items-center gap-2">
+                    <Palette className="w-4 h-4" />
+                    Time &amp; Date Glass Box
+                  </CardTitle>
+                  <CardDescription className="text-white/60 text-xs">
+                    A transparent, blurred glass panel behind the clock and date
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label className="text-white/80 text-sm">Enable Glass Box</Label>
+                      <p className="text-white/40 text-xs">Frosted glass panel behind the time and date</p>
+                    </div>
+                    <Switch
+                      checked={config.clockGlassEnabled}
+                      onCheckedChange={(checked) => setConfig({ ...config, clockGlassEnabled: checked })}
+                    />
+                  </div>
+
+                  {config.clockGlassEnabled && (
+                    <>
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <Label className="text-white/80 text-sm">Blur Amount</Label>
+                          <span className="text-white/50 text-xs">{config.clockGlassBlur}px</span>
+                        </div>
+                        <Slider
+                          value={[config.clockGlassBlur]}
+                          onValueChange={([value]) => setConfig({ ...config, clockGlassBlur: value })}
+                          min={0}
+                          max={40}
+                          step={1}
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <Label className="text-white/80 text-sm">Glass Tint Opacity</Label>
+                          <span className="text-white/50 text-xs">{config.clockGlassOpacity}%</span>
+                        </div>
+                        <Slider
+                          value={[config.clockGlassOpacity]}
+                          onValueChange={([value]) => setConfig({ ...config, clockGlassOpacity: value })}
+                          min={0}
+                          max={60}
+                          step={1}
+                        />
+                        <p className="text-white/40 text-xs">How visible the white glass tint is</p>
+                      </div>
+                    </>
+                  )}
                 </CardContent>
               </Card>
 
@@ -955,36 +1112,73 @@ const WelcomeSettings = () => {
                   className="aspect-[9/16] max-h-64 rounded-xl overflow-hidden border border-white/20 flex flex-col items-center pt-6 relative bg-[#0a0a12]"
                 >
                   <div
-                    className="leading-[0.9]"
+                    className="flex flex-col items-center rounded-2xl px-5 py-3"
                     style={{
-                      fontFamily: getFontFamily(config.clockFont),
-                      fontSize: "44px",
-                      color: config.clockTimeColor,
+                      backdropFilter: config.clockGlassEnabled ? `blur(${config.clockGlassBlur}px)` : undefined,
+                      WebkitBackdropFilter: config.clockGlassEnabled ? `blur(${config.clockGlassBlur}px)` : undefined,
+                      background: config.clockGlassEnabled
+                        ? `rgba(255,255,255,${config.clockGlassOpacity / 100})`
+                        : "transparent",
+                      border: config.clockGlassEnabled ? "1px solid rgba(255,255,255,0.25)" : "none",
                     }}
                   >
-                    05:09
-                  </div>
-                  <div
-                    style={{
-                      fontFamily: getFontFamily(config.clockFont),
-                      fontSize: "20px",
-                      fontWeight: 700,
-                      color: config.clockAmPmColor,
-                      marginTop: "-4px",
-                    }}
-                  >
-                    <span style={{ fontSize: "34px", color: config.clockSecondsColor }}>32</span> AM
-                  </div>
-                  <div
-                    style={{
-                      fontFamily: getFontFamily(config.clockFont),
-                      fontSize: "10px",
-                      textTransform: "uppercase",
-                      color: config.clockDateColor,
-                      marginTop: "-2px",
-                    }}
-                  >
-                    Tue <span style={{ fontWeight: 800, color: config.clockDateAccentColor }}>Sep 22</span> 2026
+                    <div
+                      className="leading-[0.9]"
+                      style={{
+                        fontFamily: getFontFamily(config.clockFont),
+                        fontSize: "44px",
+                        color: config.clockTimeColor,
+                        letterSpacing: `${config.clockLetterSpacing}px`,
+                        ...getPreviewTextEffectStyle(config.clockTextEffect, config.clockTimeColor),
+                      }}
+                    >
+                      05:09
+                    </div>
+                    <div
+                      style={{
+                        fontFamily: getFontFamily(config.clockFont),
+                        fontSize: "20px",
+                        fontWeight: 700,
+                        color: config.clockAmPmColor,
+                        marginTop: `calc(-4px + ${config.clockLineSpacing}px)`,
+                        letterSpacing: `${config.clockLetterSpacing}px`,
+                        ...getPreviewTextEffectStyle(config.clockTextEffect, config.clockAmPmColor),
+                      }}
+                    >
+                      <span
+                        style={{
+                          fontSize: "34px",
+                          color: config.clockSecondsColor,
+                          ...getPreviewTextEffectStyle(config.clockTextEffect, config.clockSecondsColor),
+                        }}
+                      >
+                        32
+                      </span>{" "}
+                      AM
+                    </div>
+                    <div
+                      style={{
+                        fontFamily: getFontFamily(config.clockFont),
+                        fontSize: "10px",
+                        textTransform: "uppercase",
+                        color: config.clockDateColor,
+                        marginTop: `calc(-2px + ${config.clockLineSpacing}px)`,
+                        letterSpacing: `${config.clockLetterSpacing}px`,
+                        ...getPreviewTextEffectStyle(config.clockTextEffect, config.clockDateColor),
+                      }}
+                    >
+                      Tue{" "}
+                      <span
+                        style={{
+                          fontWeight: 800,
+                          color: config.clockDateAccentColor,
+                          ...getPreviewTextEffectStyle(config.clockTextEffect, config.clockDateAccentColor),
+                        }}
+                      >
+                        Sep 22
+                      </span>{" "}
+                      2026
+                    </div>
                   </div>
                   {config.showQuote && (
                     <div
