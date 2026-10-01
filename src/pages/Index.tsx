@@ -47,7 +47,7 @@ import project2 from "@/assets/project2.jpg";
 import project3 from "@/assets/project3.jpg";
 import sureshIcon from "@/assets/icons/suresh.png";
 import photosIcon from "@/assets/icons/photos.png";
-import videoIcon from "@/assets/icons/video.png";
+import videoIcon from "@/assets/icons/iVodeos.png";
 import githubIcon from "@/assets/icons/github.png";
 import workIcon from "@/assets/icons/work.png";
 import notesIcon from "@/assets/icons/notes.png";
